@@ -12,7 +12,10 @@
   <h2>Enviar Mídia</h2>
   <input type="file" id="fileInput" accept="video/*,image/*"><br>
   <input type="text" id="codeInput" placeholder="Digite o código (ex: AB12)" maxlength="4"><br>
-  <button onclick="enviarMidia()">Enviar</button>
+  <button onclick="enviarMidia()">Enviar</button><br>
+  
+  <!-- Botão para o receptor -->
+  <button onclick="window.open('receptor.html', '_blank')">Ir para o Receptor</button>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
