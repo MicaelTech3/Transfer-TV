@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Receptor de Mídia</title>
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    video, img { max-width: 90%; max-height: 80vh; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Código do Receptor</h1>
+  <h2 id="code">Carregando...</h2>
+  <div id="mediaContainer"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbwZ3JA_OoBCfoAk_W4XxEfRp3Fbaymlo",
+      authDomain: "transfer-tv.firebaseapp.com",
+      projectId: "transfer-tv",
+      storageBucket: "transfer-tv.appspot.com",
+      messagingSenderId: "743809608847",
+      appId: "1:743809608847:web:ef9a2d0d8bbbd6d38c94fa",
+      measurementId: "G-81810TK3HJ",
+      databaseURL: "https://transfer-tv-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function gerarCodigo() {
+      const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let codigo = "";
+      for (let i = 0; i < 4; i++) {
+        codigo += letras[Math.floor(Math.random() * letras.length)];
+      }
+      return codigo;
+    }
+
+    const codigo = gerarCodigo();
+    document.getElementById("code").innerText = codigo;
+
+    // Salvar código no banco
+    db.ref("codes/" + codigo).set({ status: "aguardando" });
+
+    // Escutar alterações
+    db.ref("codes/" + codigo).on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.fileUrl) {
+        const container = document.getElementById("mediaContainer");
+        container.innerHTML = "";
+
+        if (data.type === "video") {
+          const video = document.createElement("video");
+          video.src = data.fileUrl;
+          video.controls = true;
+          video.autoplay = true;
+          container.appendChild(video);
+        } else if (data.type === "image") {
+          const img = document.createElement("img");
+          img.src = data.fileUrl;
+          container.appendChild(img);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

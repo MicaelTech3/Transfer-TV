@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Enviar Mídia</title>
+  <style>
+    body { font-family: Arial; padding: 20px; text-align: center; }
+    input, button { margin: 10px; padding: 10px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Enviar Mídia</h2>
+  <input type="file" id="fileInput" accept="video/*,image/*"><br>
+  <input type="text" id="codeInput" placeholder="Digite o código (ex: AB12)" maxlength="4"><br>
+  <button onclick="enviarMidia()">Enviar</button>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbwZ3JA_OoBCfoAk_W4XxEfRp3Fbaymlo",
+      authDomain: "transfer-tv.firebaseapp.com",
+      projectId: "transfer-tv",
+      storageBucket: "transfer-tv.appspot.com",
+      messagingSenderId: "743809608847",
+      appId: "1:743809608847:web:ef9a2d0d8bbbd6d38c94fa",
+      measurementId: "G-81810TK3HJ",
+      databaseURL: "https://transfer-tv-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const db = firebase.database();
+
+    async function enviarMidia() {
+      const file = document.getElementById("fileInput").files[0];
+      const code = document.getElementById("codeInput").value.trim().toUpperCase();
+
+      if (!file || !code) {
+        alert("Selecione um arquivo e informe o código.");
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const filePath = `uploads/${code}_${Date.now()}.${fileExt}`;
+      const storageRef = storage.ref(filePath);
+
+      try {
+        // Upload
+        const snapshot = await storageRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+
+        // Detectar tipo
+        const fileType = file.type.startsWith("video/") ? "video" : "image";
+
+        // Salvar no banco
+        await db.ref("codes/" + code).set({
+          fileUrl: downloadURL,
+          type: fileType
+        });
+
+        alert("Arquivo enviado com sucesso!");
+      } catch (error) {
+        console.error("Erro ao enviar:", error);
+        alert("Erro ao enviar o arquivo.");
+      }
+    }
+  </script>
+</body>
+</html>
