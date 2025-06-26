@@ -139,6 +139,27 @@
         localStorage.setItem("tipo_midia", data.type);
         // Baixa e salva mídia nova
         baixarESalvar(data.fileUrl, data.type);
+
+        function exibirMedia(blob, type) {
+  const container = document.getElementById("mediaContainer");
+  container.innerHTML = "";
+
+  const url = URL.createObjectURL(blob);
+
+  if(type === "video") {
+    const video = document.createElement("video");
+    video.src = url;
+    video.controls = true;
+    video.autoplay = true;
+    video.loop = true;       // <-- adiciona loop aqui
+    container.appendChild(video);
+  } else {
+    const img = document.createElement("img");
+    img.src = url;
+    container.appendChild(img);
+  }
+}
+
       }
     });
   </script>
