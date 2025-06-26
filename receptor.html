@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Receptor de Mídia</title>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 50px; }
@@ -18,6 +18,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
   <script>
+    // Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBbwZ3JA_OoBCfoAk_W4XxEfRp3Fbaymlo",
       authDomain: "transfer-tv.firebaseapp.com",
@@ -28,10 +29,69 @@
       measurementId: "G-81810TK3HJ",
       databaseURL: "https://transfer-tv-default-rtdb.firebaseio.com"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // IndexedDB Helpers
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("MediaDB", 1);
+        request.onerror = () => reject("Erro ao abrir IndexedDB");
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains("mediaStore")) {
+            db.createObjectStore("mediaStore");
+          }
+        };
+      });
+    }
+
+    function saveMedia(blob) {
+      return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction("mediaStore", "readwrite");
+          const store = tx.objectStore("mediaStore");
+          const putReq = store.put(blob, "media");
+          putReq.onsuccess = () => resolve();
+          putReq.onerror = () => reject("Erro ao salvar mídia no IndexedDB");
+        });
+      });
+    }
+
+    function getMedia() {
+      return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction("mediaStore", "readonly");
+          const store = tx.objectStore("mediaStore");
+          const getReq = store.get("media");
+          getReq.onsuccess = () => resolve(getReq.result);
+          getReq.onerror = () => reject("Erro ao ler mídia do IndexedDB");
+        });
+      });
+    }
+
+    // Exibe mídia na tela
+    function exibirMedia(blob, type) {
+      const container = document.getElementById("mediaContainer");
+      container.innerHTML = "";
+
+      const url = URL.createObjectURL(blob);
+
+      if(type === "video") {
+        const video = document.createElement("video");
+        video.src = url;
+        video.controls = true;
+        video.autoplay = true;
+        container.appendChild(video);
+      } else {
+        const img = document.createElement("img");
+        img.src = url;
+        container.appendChild(img);
+      }
+    }
+
+    // Gera código aleatório
     function gerarCodigo() {
       const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let codigo = "";
@@ -41,34 +101,44 @@
       return codigo;
     }
 
-    // Recuperar ou gerar código
+    // Recupera ou gera código
     let codigo = localStorage.getItem("codigo_receptor");
     if (!codigo) {
       codigo = gerarCodigo();
       localStorage.setItem("codigo_receptor", codigo);
       db.ref("codes/" + codigo).set({ status: "aguardando" });
     }
-
     document.getElementById("code").innerText = codigo;
 
-    // Escutar alterações
-    db.ref("codes/" + codigo).on("value", (snapshot) => {
+    // Função para baixar e salvar mídia
+    async function baixarESalvar(url, type) {
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        await saveMedia(blob);
+        exibirMedia(blob, type);
+      } catch (e) {
+        console.error("Erro ao baixar/salvar mídia:", e);
+      }
+    }
+
+    // Ao iniciar, tenta carregar mídia do IndexedDB
+    getMedia().then(blob => {
+      if(blob) {
+        // Tenta recuperar o tipo armazenado no localStorage
+        const tipo = localStorage.getItem("tipo_midia") || "image";
+        exibirMedia(blob, tipo);
+      }
+    }).catch(console.error);
+
+    // Escuta Firebase para mudanças no código
+    db.ref("codes/" + codigo).on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.fileUrl) {
-        const container = document.getElementById("mediaContainer");
-        container.innerHTML = "";
-
-        if (data.type === "video") {
-          const video = document.createElement("video");
-          video.src = data.fileUrl;
-          video.controls = true;
-          video.autoplay = true;
-          container.appendChild(video);
-        } else if (data.type === "image") {
-          const img = document.createElement("img");
-          img.src = data.fileUrl;
-          container.appendChild(img);
-        }
+        // Salva tipo da mídia no localStorage
+        localStorage.setItem("tipo_midia", data.type);
+        // Baixa e salva mídia nova
+        baixarESalvar(data.fileUrl, data.type);
       }
     });
   </script>
